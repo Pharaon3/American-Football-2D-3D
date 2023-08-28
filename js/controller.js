@@ -405,9 +405,9 @@ function setState() {
       setGameState("Rush");
     if (cs["outcome"] && cs["outcome"]["text"] == "incomplete")
       setGameState("Incomplete Rush");
-    setYard(cs["drive"]["yardline"] - yardline + " yards");
+    setYard((cs["total_yards_gained"] || cs["drive"]["yardline"] - yardline) + " yards");
     if (cs["team"] == "away")
-      setYard(-cs["drive"]["yardline"] + yardline + " yards");
+      setYard((cs["total_yards_gained"] || cs["drive"]["yardline"] - yardline) + " yards");
     if (cs["drive"]) yardline = cs["drive"]["yardline"];
   }
   if (cst == "fumble") {
@@ -417,9 +417,9 @@ function setState() {
   if (cst == "pass") {
     setGameState("Pass");
     if (cs["outcome"]) setGameState(cs["outcome"]["text"] + " Pass");
-    setYard(cs["drive"]["yardline"] - yardline + " yards");
+    setYard((cs["total_yards_gained"] || cs["drive"]["yardline"] - yardline) + " yards");
     if (cs["team"] == "away")
-      setYard(-cs["drive"]["yardline"] + yardline + " yards");
+      setYard((cs["total_yards_gained"] || cs["drive"]["yardline"] - yardline) + " yards");
     if (cs["drive"]) yardline = cs["drive"]["yardline"];
   }
   if (cst == "new_first_down") {
@@ -763,7 +763,7 @@ const equals = (a, b) => JSON.stringify(a) === JSON.stringify(b);
 
 // New function added for websocket.
 function handleEventData(data) {
-  /*
+    /*
     data.info   => (matchinfo)
     data.match    => match (match_timelinedelta)
     data.events   => events (match_timelinedelta)
