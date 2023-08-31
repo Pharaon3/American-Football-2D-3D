@@ -56,6 +56,7 @@ var goaltype = "";
 
 function countdown() {
   var interval = setInterval(function () {
+    let currentDate = new Date();
     changeScreenSize();
     miliseconds += timeInterval;
     if (miliseconds % 1000 == 0) stepInitialize();
@@ -67,7 +68,6 @@ function countdown() {
       else kickBall();
       showState();
     }
-
     if (matchStartDate) {
       let sseconds = Math.floor(
         (matchStartDate - currentDate.getTime()) / 1000
@@ -755,7 +755,7 @@ var gameType = new Array();
 var newEvents = new Array();
 var lastEvents = new Array();
 var awayteamname, hometeamname;
-var homeScore, awayScore, periodlength, getDataTime;
+var homeScore = 0, awayScore = 0, periodlength, getDataTime;
 var teamNames = new Array();
 var periodScoreH = new Array();
 var periodScoreA = new Array();
@@ -763,7 +763,7 @@ const equals = (a, b) => JSON.stringify(a) === JSON.stringify(b);
 
 // New function added for websocket.
 function handleEventData(data) {
-    /*
+      /*
     data.info   => (matchinfo)
     data.match    => match (match_timelinedelta)
     data.events   => events (match_timelinedelta)
@@ -822,8 +822,8 @@ function handleEventData(data) {
     // document.getElementById('period').textContent = capitalizeWords(match['status']['name'].split(" ")).join(' ')
     // Score Setting
     var result = match["result"];
-    if (result["home"] > -1) homeScore = result["home"];
-    if (result["away"] > -1) awayScore = result["away"];
+    if (result["home"] != null && result["home"] > -1) homeScore = result["home"];
+    if (result["away"] != null && result["away"] > -1) awayScore = result["away"];
     $("#score").text(homeScore + "-" + awayScore);
     $("#homeTscore").text(homeScore);
     $("#awayTscore").text(awayScore);
@@ -877,6 +877,7 @@ function handleEventData(data) {
 
     // Period score end
 
+    isRunning = true;
     if (match["status"]["name"] == "Not started") {
       //Match End
       const currentDate = new Date();
@@ -900,7 +901,6 @@ function handleEventData(data) {
 
       matchStartDate = date.getTime();
     }
-    isRunning = true;
     if (match["status"]["name"] == "Ended") {
       //Match End
       setCenterFrame("Match End", homeScore + " : " + awayScore);
@@ -917,6 +917,10 @@ function handleEventData(data) {
       setCenterFrame("Break", homeScore + " : " + awayScore);
       isRunning = false;
     }
+    if (match["status"]["name"] == "Not started") {
+      setCenterFrame("Not started", homeScore + " : " + awayScore);
+      isRunning = false;
+    }
     if (match["p"] == 1) {
       $("#period").text("1st Quarter");
     }
@@ -930,7 +934,11 @@ function handleEventData(data) {
       $("#period").text("4th Quarter");
     }
     if (match["p"] == 0) {
-      $("#period").text("END");
+      if (match["status"]["name"] == "Not started") {
+        $("#period").text("Not Started")
+      } else {
+        $("#period").text("END");
+      }
     }
     if (match["p"] == 31) {
       setTimer = false;
