@@ -8,5 +8,3 @@ Then you can see it's working.
 
 Check all details, and fix.
 
-live:.cid.81f6e6f5282317c6
-When you are here, remove the obove line.
