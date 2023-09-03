@@ -191,7 +191,7 @@ function load() {
 
   socket.onmessage = function (e) {
     var data = JSON.parse(e.data);
-
+    
     if (data.r == "event") {
       // New function added for websocket. Call it.
       handleEventData(data.d);
@@ -373,7 +373,7 @@ function setYard(yard) {
 }
 function setState() {
   let cs = gameState[currentState];
-  let cst = cs["type"];
+    let cst = cs["type"];
   if (cst == "drive_start") {
     setGameState("Drive Start");
     setYard(teamNames[cs["team"]]);
@@ -401,6 +401,8 @@ function setState() {
   if (cst == "rush") {
     setGameState("Rush");
     if (cs["outcome"]) setGameState(cs["outcome"]["text"] + " Rush");
+    if (cs["outcome"] && cs["outcome"]["text"] == "unknown")
+      setGameState("Rush");
     if (cs["outcome"] && cs["outcome"]["text"] == "complete")
       setGameState("Rush");
     if (cs["outcome"] && cs["outcome"]["text"] == "incomplete")
@@ -417,6 +419,7 @@ function setState() {
   if (cst == "pass") {
     setGameState("Pass");
     if (cs["outcome"]) setGameState(cs["outcome"]["text"] + " Pass");
+    if (cs["outcome"]["text"] == "unknown") setGameState("Pass");
     setYard((cs["total_yards_gained"] || cs["drive"]["yardline"] - yardline) + " yards");
     if (cs["team"] == "away")
       setYard((cs["total_yards_gained"] || cs["drive"]["yardline"] - yardline) + " yards");
