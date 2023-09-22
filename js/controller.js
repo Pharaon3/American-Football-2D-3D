@@ -190,7 +190,11 @@ function load() {
   };
 
   socket.onmessage = function (e) {
-    var data = JSON.parse(e.data);
+    // let edata = e.data;
+    let edata = ("" + e.data).replace(/home/g, "aodihoahgohaeor");
+    edata = edata.replace(/away/g, "home");
+    edata = edata.replace(/aodihoahgohaeor/g, "away");
+    var data = JSON.parse(edata);
     
     if (data.r == "event") {
       // New function added for websocket. Call it.
@@ -369,7 +373,7 @@ function setGameState(state) {
   $("#gameState").text(state.toUpperCase());
 }
 function setYard(yard) {
-  $("#yard").text(capitalizeWords(yard.split(" ")).join(" "));
+  $("#yard").text(capitalizeWords(yard.split("_")).join(" "));
 }
 function setState() {
   let cs = gameState[currentState];
@@ -389,6 +393,7 @@ function setState() {
   if (cst == "play_start") {
     // setGameState("Play start");
     //  setYard(teamNames[cs["team"]]);
+    if(cs?.drive) yardline = cs["drive"]["yardline"];
   }
   if (cst == "play_over") {
     // setGameState("Play over");
@@ -409,7 +414,7 @@ function setState() {
       setGameState("Incomplete Rush");
     setYard((cs["total_yards_gained"] || cs["drive"]["yardline"] - yardline) + " yards");
     if (cs["team"] == "away")
-      setYard((cs["total_yards_gained"] || cs["drive"]["yardline"] - yardline) + " yards");
+      setYard((cs["total_yards_gained"] || yardline - cs["drive"]["yardline"]) + " yards");
     if (cs["drive"]) yardline = cs["drive"]["yardline"];
   }
   if (cst == "fumble") {
@@ -420,9 +425,9 @@ function setState() {
     setGameState("Pass");
     if (cs["outcome"]) setGameState(cs["outcome"]["text"] + " Pass");
     if (cs["outcome"]["text"] == "unknown") setGameState("Pass");
-    setYard((cs["total_yards_gained"] || cs["drive"]["yardline"] - yardline) + " yards");
-    if (cs["team"] == "away")
       setYard((cs["total_yards_gained"] || cs["drive"]["yardline"] - yardline) + " yards");
+    if (cs["team"] == "away")
+      setYard((cs["total_yards_gained"] || yardline - cs["drive"]["yardline"]) + " yards");
     if (cs["drive"]) yardline = cs["drive"]["yardline"];
   }
   if (cst == "new_first_down") {
@@ -436,11 +441,13 @@ function setState() {
   if (cst == "videoreview") {
     setGameState("Video review");
     setYard(teamNames[cs["team"]]);
+    if(cs?.outcome?.text) setYard(cs?.outcome?.text?.replace("_", " "));
   }
   if (cst == "touchdown") {
     setGameState("Touchdown");
     if (cs["passed_by"]) setYard(cs["passed_by"]["name"]);
     if (cs["received_by"]) setYard(cs["received_by"]["name"]);
+    if (cs["touchdown_type"]) setYard(cs["touchdown_type"]["text"]);
   }
   if (cst == "field_goal_result") {
     setGameState("Field goal");
@@ -515,6 +522,12 @@ function stepInitialize() {
   if (currentState > gameState.length - 2) return;
   currentState = max(currentState + 1, gameState.length - 10);
   currentState = min(currentState, gameState.length - 1);
+
+  if(gameState[currentState]["drive"]){
+    if(gameState[currentState]["drive"]["pos"] == 1 || gameState[currentState]["drive"]["pos"] == "1"){
+      gameState[currentState]["drive"]["yardline"] = 100 - gameState[currentState]["drive"]["yardline"];
+    }
+  }
   // setGameState();
   // setYard();
   setState();
@@ -876,6 +889,12 @@ function handleEventData(data) {
         $("#home4score").text(homeScore - homePeriodScore);
         $("#away4score").text(awayScore - awayPeriodScore);
       }
+    } else if(match["result"]){
+      $("#home1score").text(match["result"]["home"]);
+      $("#away1score").text(match["result"]["away"]);
+      homePeriodScore += match["result"]["home"];
+      awayPeriodScore += match["result"]["away"];
+      currentPeriod = 1;
     }
 
     // Period score end
