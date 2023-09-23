@@ -86,9 +86,11 @@ function countdown() {
 
     if (played != currentPlayed) {
       currentPlayed = played;
-      time = played * 1000;
+      if(parseInt(match.p) < 9) time = (parseInt(match["p"]) * 15 * 60 - played) * 1000;
+      else time = (parseInt(match.p) % 10 * 15 * 60) * 1000;
     }
-    if (isRunning) time += timeInterval;
+    if (isRunning) time -= timeInterval;
+    time = Math.max(0, time);
     let seconds = Math.floor(time / 1000);
     let second = seconds % 60;
     let minutes = Math.floor(seconds / 60);
@@ -329,7 +331,7 @@ function setYard1() {
       $("#yard").text(gameState[currentState]["points"] + "points");
     if (gameState[currentState]["points"] == 0) $("#yard").text("Blocked");
     x2 = ((gameState[currentState]["drive"]["yardline"] - 50) * w1) / 50;
-    y2 = (Math.random() * 100 * hp) / 100;
+    y2 = (0.5 * 100 * hp) / 100;
   } else if (gameState[currentState]["outcome"]) {
     $("#yard").text(gameState[currentState]["outcome"]["text"]);
   } else if (gameState[currentState]["team"] != "") {
@@ -373,6 +375,7 @@ function setGameState(state) {
   $("#gameState").text(state.toUpperCase());
 }
 function setYard(yard) {
+  yard = yard.replace("NaN", "0");
   $("#yard").text(capitalizeWords(yard.split("_")).join(" "));
 }
 function setState() {
@@ -393,7 +396,7 @@ function setState() {
   if (cst == "play_start") {
     // setGameState("Play start");
     //  setYard(teamNames[cs["team"]]);
-    if(cs?.drive) yardline = cs["drive"]["yardline"];
+    if(cs["drive"]) yardline = cs["drive"]["yardline"];
   }
   if (cst == "play_over") {
     // setGameState("Play over");
@@ -440,6 +443,7 @@ function setState() {
   }
   if (cst == "videoreview") {
     setGameState("Video review");
+    isRunning = false;
     setYard(teamNames[cs["team"]]);
     if(cs?.outcome?.text) setYard(cs?.outcome?.text?.replace("_", " "));
   }
@@ -451,6 +455,7 @@ function setState() {
   }
   if (cst == "field_goal_result") {
     setGameState("Field goal");
+    isRunning = false;
     setYard(cs["outcome"]["text"]);
   }
   if (cst == "penalty_american_football") {
@@ -459,14 +464,17 @@ function setState() {
   }
   if (cst == "extra_point") {
     setGameState(cs["points"] + " Extra point");
+    isRunning = false;
     setYard(cs["result"]["text"]);
   }
   if (cst == "tv_timeout_start") {
     setGameState("TV Timeout");
+    isRunning = false;
     setYard("Start");
   }
   if (cst == "tv_timeout_stop") {
     setGameState("TV Timeout");
+    isRunning = false;
     setYard("Over");
   }
   if (cst == "punt_result") {
@@ -487,6 +495,7 @@ function setState() {
   if (cst == "timeout") {
     setGameState("Timeout");
     if (cs["name"] == "Timeout") setYard("Start");
+    isRunning = false;
     if (cs["name"] == "Timeout over") setYard("Over");
   }
   if (cst == "turnover_football") {
@@ -523,17 +532,17 @@ function stepInitialize() {
   currentState = max(currentState + 1, gameState.length - 10);
   currentState = min(currentState, gameState.length - 1);
 
-  if(gameState[currentState]["drive"]){
-    if(gameState[currentState]["drive"]["pos"] == 1 || gameState[currentState]["drive"]["pos"] == "1"){
-      gameState[currentState]["drive"]["yardline"] = 100 - gameState[currentState]["drive"]["yardline"];
-    }
-  }
+  // if(gameState[currentState]["drive"]){
+  //   if(gameState[currentState]["drive"]["pos"] == 1 || gameState[currentState]["drive"]["pos"] == "1"){
+  //     gameState[currentState]["drive"]["yardline"] = 100 - gameState[currentState]["drive"]["yardline"];
+  //   }
+  // }
   // setGameState();
   // setYard();
   setState();
   if (gameState[currentState]["drive"]) {
     x2 = ((gameState[currentState]["drive"]["yardline"] - 50) * w1) / 50;
-    y2 = (Math.random() * 100 * hp) / 100;
+    y2 = (0.5 * 100 * hp) / 100;
   }
   x_1_1 = mapX(x1, y1);
   y_1_1 = mapY(x1, y1);
@@ -784,6 +793,7 @@ function handleEventData(data) {
     data.match    => match (match_timelinedelta)
     data.events   => events (match_timelinedelta)
   */
+//  console.log("data: ", data);
 
   if (data.info) {
     handleInfoData(data);
@@ -993,9 +1003,10 @@ function handleEventData(data) {
   newEvents.forEach((newEvent) => {
     let flag = 1;
     gameState.forEach((lastEvent) => {
-      if (equals(newEvent, lastEvent)) flag = 0;
+      if (newEvent["_scoutid"] == lastEvent["_scoutid"]) flag = 0;
     });
     if (flag == 1) {
+      if(newEvent["drive"] && newEvent["drive"]["pos"] == 1) newEvent["drive"]["yardline"] = 100  - newEvent["drive"]["yardline"];
       gameState.push(newEvent);
     }
   });
