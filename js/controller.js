@@ -11,6 +11,9 @@ var currentBowlNumber, ballPlayMode;
 var t = 0.001;
 var played = 0;
 var currentPlayed = 0;
+var remaining = 0;
+var currentRemaining = 0;
+var socketLastResponseTime;
 var time = 0;
 var isRunning = false;
 var matchStartDate;
@@ -86,8 +89,12 @@ function countdown() {
 
     if (played != currentPlayed) {
       currentPlayed = played;
-      if(parseInt(match.p) < 9) time = (parseInt(match["p"]) * 15 * 60 - played) * 1000;
-      else time = (parseInt(match.p) % 10 * 15 * 60) * 1000;
+      // if(parseInt(match.p) < 9) time = (parseInt(match["p"]) * 15 * 60 - played) * 1000;
+      // else time = (parseInt(match.p) % 10 * 15 * 60) * 1000;
+    }
+    if (remaining != currentRemaining) {
+      currentRemaining = remaining;
+      time = remaining * 1000;
     }
     if (isRunning) time -= timeInterval;
     time = Math.max(0, time);
@@ -105,6 +112,42 @@ function countdown() {
     );
   }, timeInterval);
 }
+function connect() {
+  const urlParams = new URLSearchParams(window.location.search);
+  const eventId = Number(urlParams.get("eventId"));
+
+  socket = new WebSocket("wss://gamecast.betdata.pro:8443");
+  socket.onopen = function (e) {
+    socketLastResponseTime = Date.now();
+    socket.send(JSON.stringify({ r: "subscribe_event", a: { id: eventId } }));
+  };
+
+  socket.onmessage = function (e) {
+    socketLastResponseTime = Date.now();
+    let edata = ("" + e.data).replace(/home/g, "aodihoahgohaeor");
+    edata = edata.replace(/away/g, "home");
+    edata = edata.replace(/aodihoahgohaeor/g, "away");
+    var data = JSON.parse(edata);
+    
+    // var data = JSON.parse(e.data);
+
+    if (data.r == "event") {
+      // New function added for websocket. Call it.
+      handleEventData(data.d);
+    }
+  };
+}
+setInterval(function() {
+  if (socketLastResponseTime && (Date.now() - socketLastResponseTime) > 8000) {
+    if (socket) {
+      try {
+        socket.close();
+      } catch (err) {};
+    }
+    console.log('Reconnecting...');
+    connect();
+  }
+}, 4000);
 function bounceBall() {
   tt = t;
   x_1 = mapX(x, y);
@@ -184,25 +227,26 @@ function load() {
   ballPlayMode = 0;
   currentBowlNumber = 0;
   countdown();
-  const urlParams = new URLSearchParams(window.location.search);
-  const eventId = Number(urlParams.get("eventId"));
-  socket = new WebSocket("wss://gamecast.betdata.pro:8443");
-  socket.onopen = function (e) {
-    socket.send(JSON.stringify({ r: "subscribe_event", a: { id: eventId } }));
-  };
+  connect();
+  // const urlParams = new URLSearchParams(window.location.search);
+  // const eventId = Number(urlParams.get("eventId"));
+  // socket = new WebSocket("wss://gamecast.betdata.pro:8443");
+  // socket.onopen = function (e) {
+  //   socket.send(JSON.stringify({ r: "subscribe_event", a: { id: eventId } }));
+  // };
 
-  socket.onmessage = function (e) {
-    // let edata = e.data;
-    let edata = ("" + e.data).replace(/home/g, "aodihoahgohaeor");
-    edata = edata.replace(/away/g, "home");
-    edata = edata.replace(/aodihoahgohaeor/g, "away");
-    var data = JSON.parse(edata);
+  // socket.onmessage = function (e) {
+  //   // let edata = e.data;
+  //   let edata = ("" + e.data).replace(/home/g, "aodihoahgohaeor");
+  //   edata = edata.replace(/away/g, "home");
+  //   edata = edata.replace(/aodihoahgohaeor/g, "away");
+  //   var data = JSON.parse(edata);
     
-    if (data.r == "event") {
-      // New function added for websocket. Call it.
-      handleEventData(data.d);
-    }
-  };
+  //   if (data.r == "event") {
+  //     // New function added for websocket. Call it.
+  //     handleEventData(data.d);
+  //   }
+  // };
   // document.getElementById('link').setAttribute('href', '../tennis-2d/index.html?eventId=' + eventId)
 }
 function max(a, b) {
@@ -443,7 +487,7 @@ function setState() {
   }
   if (cst == "videoreview") {
     setGameState("Video review");
-    isRunning = false;
+    // isRunning = false;
     setYard(teamNames[cs["team"]]);
     if(cs?.outcome?.text) setYard(cs?.outcome?.text?.replace("_", " "));
   }
@@ -455,7 +499,7 @@ function setState() {
   }
   if (cst == "field_goal_result") {
     setGameState("Field goal");
-    isRunning = false;
+    // isRunning = false;
     setYard(cs["outcome"]["text"]);
   }
   if (cst == "penalty_american_football") {
@@ -464,17 +508,17 @@ function setState() {
   }
   if (cst == "extra_point") {
     setGameState(cs["points"] + " Extra point");
-    isRunning = false;
+    // isRunning = false;
     setYard(cs["result"]["text"]);
   }
   if (cst == "tv_timeout_start") {
     setGameState("TV Timeout");
-    isRunning = false;
+    // isRunning = false;
     setYard("Start");
   }
   if (cst == "tv_timeout_stop") {
     setGameState("TV Timeout");
-    isRunning = false;
+    // isRunning = false;
     setYard("Over");
   }
   if (cst == "punt_result") {
@@ -495,7 +539,7 @@ function setState() {
   if (cst == "timeout") {
     setGameState("Timeout");
     if (cs["name"] == "Timeout") setYard("Start");
-    isRunning = false;
+    // isRunning = false;
     if (cs["name"] == "Timeout over") setYard("Over");
   }
   if (cst == "turnover_football") {
@@ -804,6 +848,8 @@ function handleEventData(data) {
   if (match) {
     if (match["timeinfo"]) {
       played = match["timeinfo"]["played"];
+      remaining = match["timeinfo"]["remaining"];
+      isRunning = match["timeinfo"]["running"];
     }
     if (match["status"]["name"] == "Interrupted") {
       isLimitedCov = true;
@@ -909,7 +955,7 @@ function handleEventData(data) {
 
     // Period score end
 
-    isRunning = true;
+    // isRunning = true;
     if (match["status"]["name"] == "Not started") {
       //Match End
       const currentDate = new Date();
@@ -936,7 +982,7 @@ function handleEventData(data) {
     if (match["status"]["name"] == "Ended") {
       //Match End
       setCenterFrame("Match End", homeScore + " : " + awayScore);
-      isRunning = false;
+      // isRunning = false;
       if (match["status"]["name"] == "Ended") {
         setGameState("Match End");
       }
@@ -947,11 +993,11 @@ function handleEventData(data) {
     if (match["status"]["name"] == "Break") {
       //Break time
       setCenterFrame("Break", homeScore + " : " + awayScore);
-      isRunning = false;
+      // isRunning = false;
     }
     if (match["status"]["name"] == "Not started") {
       setCenterFrame("Not started", homeScore + " : " + awayScore);
-      isRunning = false;
+      // isRunning = false;
     }
     if (match["p"] == 1) {
       $("#period").text("1st Quarter");
@@ -976,19 +1022,19 @@ function handleEventData(data) {
       setTimer = false;
       setCenterFrame("Break", homeScore + ":" + awayScore);
       $("#period").text("Break");
-      isRunning = false;
+      // isRunning = false;
     }
     if (match["p"] == 32) {
       setTimer = false;
       setCenterFrame("Halftime", homeScore + ":" + awayScore);
       $("#period").text("Halftime");
-      isRunning = false;
+      // isRunning = false;
     }
     if (match["p"] == 33) {
       setTimer = false;
       setCenterFrame("Break", homeScore + ":" + awayScore);
       $("#period").text("Break");
-      isRunning = false;
+      // isRunning = false;
     }
   }
 
