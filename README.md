@@ -6,5 +6,3 @@ Check this link.
 When run this html, add "?evenId=41338979" in url.
 Then you can see it's working.
 
-Check all details, and fix.
-
